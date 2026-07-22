@@ -1,9 +1,10 @@
 #!/bin/sh
 #
-# pve-nag-buster.sh (v04) https://github.com/foundObjects/pve-nag-buster
+# pve-nag-buster.sh (v05) https://github.com/mriechers/pve-nag-buster
 # Copyright (C) 2019 /u/seaQueue (reddit.com/u/seaQueue)
 #
-# Removes Proxmox VE 6.x+ license nags automatically after updates
+# Removes Proxmox VE license nags automatically after updates.
+# Homelab fork: robust fail-safe checked_command patch (PVE 8/9) + opt-in repos.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -14,28 +15,43 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-NAGTOKEN="data.status.toLowerCase() !== 'active'"
-NAGFILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
 SCRIPT="$(basename "$0")"
 
-# disable license nag: https://johnscs.com/remove-proxmox51-subscription-notice/
+# Neutralize the checked_command "No valid subscription" modal: replace the
+# whole `if (...) { Ext.Msg.show(...) } else { orig_cmd(); }` conditional with a
+# bare `orig_cmd();`. One all-or-nothing multi-line substitution — if the block
+# does not match (future PVE refactor) nothing is written (fail-safe).
+# Returns 0 if the file changed, 1 otherwise.
+patch_nag() {
+  nagfile="$1"
+  [ -f "$nagfile" ] || return 1
+  command -v perl >/dev/null 2>&1 || { echo "$SCRIPT: perl missing, skipping nag patch" >&2; return 1; }
 
-if grep -qs "$NAGTOKEN" "$NAGFILE" > /dev/null 2>&1; then
-  echo "$SCRIPT: Removing Nag ..."
-  sed -i.orig "s/$NAGTOKEN/false/g" "$NAGFILE"
-  systemctl restart pveproxy.service
-fi
+  tmp="$(mktemp)" || return 1
+  cp "$nagfile" "$tmp" || { rm -f "$tmp"; return 1; }
 
-# disable paid repo list
+  perl -0777 -i -pe 's/if\s*\(\s*res === null\s*\|\|\s*res === undefined\s*\|\|\s*!res\s*\|\|\s*res\.data\.status\.toLowerCase\(\)\s*!==\s*\x27active\x27\s*\)\s*\{.*?\}\s*else\s*\{\s*orig_cmd\(\);\s*\}/orig_cmd();/s' "$tmp"
 
-PAID_BASE="/etc/apt/sources.list.d/pve-enterprise"
+  if cmp -s "$nagfile" "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
 
-if [ -f "$PAID_BASE.list" ]; then
-  echo "$SCRIPT: Disabling PVE paid repo list ..."
-  mv -f "$PAID_BASE.list" "$PAID_BASE.disabled"
-fi
+  cp "$nagfile" "$nagfile.orig"
+  cat "$tmp" > "$nagfile"
+  rm -f "$tmp"
+  echo "$SCRIPT: Nag neutralized in $nagfile"
+  return 0
+}
+
+main() {
+  nagfile="${NAGFILE:-/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js}"
+  if patch_nag "$nagfile"; then
+    command -v systemctl >/dev/null 2>&1 && systemctl restart pveproxy.service
+  fi
+  return 0
+}
+
+# Run unless sourced for tests (test harness sets PVE_NAG_BUSTER_SOURCE=1)
+[ "${PVE_NAG_BUSTER_SOURCE:-0}" = "1" ] || main "$@"
