@@ -13,4 +13,5 @@ end="$(grep -n '^YEET$' install.sh | cut -d: -f1)"
   tail -n+"$end" install.sh
 } > install.sh.new
 mv install.sh.new install.sh
+chmod 755 install.sh
 echo "Re-packed install.sh offline blob from pve-nag-buster.sh"
