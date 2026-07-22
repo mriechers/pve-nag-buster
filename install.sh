@@ -75,15 +75,6 @@ _uninstall() {
 _install() {
   # create hooks and no-subscription repo list, install hook script, run once
 
-  VERSION_CODENAME=''
-  ID=''
-  . /etc/os-release
-  if [ -n "$VERSION_CODENAME" ]; then
-    RELEASE="$VERSION_CODENAME"
-  else
-    RELEASE=$(awk -F"[)(]+" '/VERSION=/ {print $2}' /etc/os-release)
-  fi
-
   # repo handling is opt-in (--repos); the hook script performs it when the
   # marker is present. Default installs leave apt sources untouched.
   if [ "${REPOS:-0}" = "1" ]; then
@@ -148,6 +139,6 @@ YEET
 }
 
 assert_root() { [ "$(id -u)" -eq '0' ] || { echo "This action requires root." && exit 1; }; }
-_usage() { echo "Usage: $(basename "$0") (--emit|--offline|--uninstall)"; }
+_usage() { echo "Usage: $(basename "$0") (--install|--offline|--repos|--uninstall|--emit)"; }
 
 _main "$@"
