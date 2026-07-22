@@ -64,5 +64,10 @@ echo 'MANAGE_REPOS=1' > "$WORK/marker"
 NAGFILE="$WORK/nag_absent.js" MARKER="$WORK/marker" SOURCES_DIR="$SRC2" RELEASE=trixie main
 check "marker -> enterprise disabled"         "$(grep -c '^Enabled: false' "$SRC2/pve-enterprise.sources")" "1"
 
+# --- install.sh smoke checks (no root needed) ---
+check "install.sh syntax ok"     "$(sh -n "$REPO/install.sh" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
+check "install.sh --emit shebang" "$(sh "$REPO/install.sh" --emit 2>/dev/null | head -1)" "#!/bin/sh"
+check "unknown flag -> usage"    "$(sh "$REPO/install.sh" --bogus 2>/dev/null | grep -c Usage)" "1"
+
 echo
 if [ "$FAIL" = 0 ]; then echo "ALL PASS"; exit 0; else echo "SOME FAILED"; exit 1; fi
