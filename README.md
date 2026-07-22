@@ -1,5 +1,5 @@
 ## pve-nag-buster 
-https://github.com/foundObjects/pve-nag-buster
+https://github.com/mriechers/pve-nag-buster
 
 `pve-nag-buster` is a dpkg hook script that persistently removes license nags
 from Proxmox VE 6.x and up. Install it once and you won't see another license
@@ -10,7 +10,7 @@ means. High quality open source software like Proxmox needs our support!
 
 ### News:
 
-Last updated for: pve-manager/6.4-4/337d6701 (running kernel: 5.4.106-1-pve)
+Last updated for: pve-manager/9.1.1 (proxmox-widget-toolkit 5.1.2)
 
 ### How does it work?
 
@@ -23,9 +23,16 @@ The installer installs the dpkg hook script, adds the pve-no-subscription repo l
 and calls the hook script once. There are no external dependencies beyond the base
 packages installed with PVE by default.
 
+This homelab fork replaces the brittle string-swap with a **fail-safe patch** of the
+`checked_command` function: if the expected code block isn't found (e.g. a future
+Proxmox refactor) it changes nothing rather than corrupting `proxmoxlib.js`. Repo
+handling is **opt-in** — run `sudo ./install.sh --repos` to also disable the
+enterprise `.sources` (deb822) and add the no-subscription repo; the default install
+touches only the nag.
+
 ### Installation
 ```sh
-wget https://raw.githubusercontent.com/foundObjects/pve-nag-buster/master/install.sh
+wget https://raw.githubusercontent.com/mriechers/pve-nag-buster/master/install.sh
 
 # Always read scripts downloaded from the internet before running them with sudo
 sudo bash install.sh
@@ -36,7 +43,7 @@ chmod +x install.sh && sudo ./install.sh
 
 With Git:
 ```sh
-git clone https://github.com/foundObjects/pve-nag-buster.git
+git clone https://github.com/mriechers/pve-nag-buster.git
 
 # Always read scripts downloaded from the internet before running them with sudo
 cd pve-nag-buster && sudo ./install.sh
@@ -67,7 +74,7 @@ encoded copy to stdout and quits. To install using the stored copy just run
 
 ### Contact:
 
-[Open an issue](https://github.com/foundObjects/pve-nag-buster/issues) on GitHub
+[Open an issue](https://github.com/mriechers/pve-nag-buster/issues) on GitHub
 
 Please get in touch if you find a way to improve anything, otherwise enjoy!
 
