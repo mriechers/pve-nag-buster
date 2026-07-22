@@ -66,20 +66,16 @@ check "marker -> enterprise disabled"         "$(grep -c '^Enabled: false' "$SRC
 
 # --- install.sh smoke checks (no root needed) ---
 
-# Run install.sh --emit with an xz decoder reachable inside its hardened PATH.
-# Returns 3 if no xz/unxz decoder is available anywhere.
-emit_hook() {
-  _xz="$(command -v xz 2>/dev/null || command -v unxz 2>/dev/null)" || true
-  [ -n "$_xz" ] || return 3
-  PATH="$PATH:$(dirname "$_xz")" sh "$REPO/install.sh" --emit 2>/dev/null
+# Decode the base64+xz offline blob embedded in install.sh directly, without
+# `install.sh --emit` (which resets PATH to a hardened value excluding Homebrew's
+# xz on macOS). python3+lzma is present on both macOS and Proxmox.
+decode_blob() {
+  awk '/base64 -d << /{f=1;next} /^YEET$/{f=0} f' "$REPO/install.sh" \
+    | python3 -c 'import sys,base64,lzma; sys.stdout.buffer.write(lzma.decompress(base64.b64decode(sys.stdin.buffer.read())))'
 }
 
 check "install.sh syntax ok"     "$(sh -n "$REPO/install.sh" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
-if emit_hook >/dev/null 2>&1; then
-  check "install.sh --emit shebang" "$(emit_hook | head -1)" "#!/bin/sh"
-else
-  echo "skip - install.sh --emit shebang (no xz/unxz decoder found)"
-fi
+check "offline blob decodes to a hook" "$(decode_blob 2>/dev/null | head -1)" "#!/bin/sh"
 check "unknown flag -> usage"    "$(sh "$REPO/install.sh" --bogus 2>/dev/null | grep -c Usage)" "1"
 
 echo
