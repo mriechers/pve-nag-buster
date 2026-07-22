@@ -65,8 +65,21 @@ NAGFILE="$WORK/nag_absent.js" MARKER="$WORK/marker" SOURCES_DIR="$SRC2" RELEASE=
 check "marker -> enterprise disabled"         "$(grep -c '^Enabled: false' "$SRC2/pve-enterprise.sources")" "1"
 
 # --- install.sh smoke checks (no root needed) ---
+
+# Run install.sh --emit with an xz decoder reachable inside its hardened PATH.
+# Returns 3 if no xz/unxz decoder is available anywhere.
+emit_hook() {
+  _xz="$(command -v xz 2>/dev/null || command -v unxz 2>/dev/null)" || true
+  [ -n "$_xz" ] || return 3
+  PATH="$PATH:$(dirname "$_xz")" sh "$REPO/install.sh" --emit 2>/dev/null
+}
+
 check "install.sh syntax ok"     "$(sh -n "$REPO/install.sh" >/dev/null 2>&1 && echo ok || echo bad)" "ok"
-check "install.sh --emit shebang" "$(sh "$REPO/install.sh" --emit 2>/dev/null | head -1)" "#!/bin/sh"
+if emit_hook >/dev/null 2>&1; then
+  check "install.sh --emit shebang" "$(emit_hook | head -1)" "#!/bin/sh"
+else
+  echo "skip - install.sh --emit shebang (no xz/unxz decoder found)"
+fi
 check "unknown flag -> usage"    "$(sh "$REPO/install.sh" --bogus 2>/dev/null | grep -c Usage)" "1"
 
 echo
