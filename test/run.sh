@@ -39,5 +39,30 @@ patch_nag "$WORK/c.js"; rc=$?
 check "patch_nag returns 1 when pattern absent"  "$rc" "1"
 check "no backup when nothing matched"        "$( [ -f "$WORK/c.js.orig" ] && echo yes || echo no )" "no"
 
+# --- repos: deb822 disable + no-subscription creation ---
+SRC="$WORK/sources"; mkdir -p "$SRC"
+cat > "$SRC/pve-enterprise.sources" <<'EOF'
+Types: deb
+URIs: https://enterprise.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-enterprise
+Enabled: true
+EOF
+SOURCES_DIR="$SRC" RELEASE=trixie manage_repos
+check "enterprise disabled"                  "$(grep -c '^Enabled: false' "$SRC/pve-enterprise.sources")" "1"
+check "no-subscription created"              "$( [ -f "$SRC/pve-no-subscription.sources" ] && echo yes || echo no )" "yes"
+SOURCES_DIR="$SRC" RELEASE=trixie manage_repos
+check "repos idempotent: single Enabled:false" "$(grep -c '^Enabled: false' "$SRC/pve-enterprise.sources")" "1"
+
+# --- marker gate: repos untouched without marker, managed with it ---
+SRC2="$WORK/sources2"; mkdir -p "$SRC2"
+printf 'Types: deb\nEnabled: true\n' > "$SRC2/pve-enterprise.sources"
+printf 'x\n' > "$WORK/nag_absent.js"
+NAGFILE="$WORK/nag_absent.js" MARKER="$WORK/no-marker" SOURCES_DIR="$SRC2" main
+check "no marker -> enterprise untouched"     "$(grep -c 'Enabled: true' "$SRC2/pve-enterprise.sources")" "1"
+echo 'MANAGE_REPOS=1' > "$WORK/marker"
+NAGFILE="$WORK/nag_absent.js" MARKER="$WORK/marker" SOURCES_DIR="$SRC2" RELEASE=trixie main
+check "marker -> enterprise disabled"         "$(grep -c '^Enabled: false' "$SRC2/pve-enterprise.sources")" "1"
+
 echo
 if [ "$FAIL" = 0 ]; then echo "ALL PASS"; exit 0; else echo "SOME FAILED"; exit 1; fi

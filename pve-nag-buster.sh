@@ -45,10 +45,61 @@ patch_nag() {
   return 0
 }
 
+# --- optional repo handling (deb822-aware, opt-in via marker) -------------
+# Set `Enabled: false` in a deb822 .sources stanza (idempotent).
+_disable_deb822() {
+  f="$1"
+  [ -f "$f" ] || return 0
+  if grep -qi '^[[:space:]]*Enabled:[[:space:]]*true' "$f"; then
+    sed -i '' 's/^[[:space:]]*[Ee]nabled:[[:space:]]*[Tt]rue/Enabled: false/' "$f"
+    echo "$SCRIPT: disabled repo $f"
+  elif ! grep -qi '^[[:space:]]*Enabled:' "$f"; then
+    printf 'Enabled: false\n' >> "$f"
+    echo "$SCRIPT: disabled repo $f (appended Enabled: false)"
+  fi
+}
+
+# Rename a legacy .list repo out of the way (older hosts).
+_disable_list() {
+  base="$1"
+  if [ -f "$base.list" ]; then
+    mv -f "$base.list" "$base.disabled"
+    echo "$SCRIPT: disabled legacy $base.list"
+  fi
+}
+
+manage_repos() {
+  dir="${SOURCES_DIR:-/etc/apt/sources.list.d}"
+  _disable_deb822 "$dir/pve-enterprise.sources"
+  _disable_deb822 "$dir/ceph.sources"
+  _disable_list "$dir/pve-enterprise"
+  _disable_list "$dir/ceph"
+
+  if ! grep -rqsi 'pve-no-subscription' "$dir" 2>/dev/null; then
+    release="${RELEASE:-$( . /etc/os-release 2>/dev/null; echo "${VERSION_CODENAME:-trixie}" )}"
+    cat > "$dir/pve-no-subscription.sources" <<EOF
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: $release
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+    echo "$SCRIPT: wrote $dir/pve-no-subscription.sources"
+  fi
+}
+
 main() {
   nagfile="${NAGFILE:-/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js}"
+  marker="${MARKER:-/etc/default/pve-nag-buster}"
+
   if patch_nag "$nagfile"; then
     command -v systemctl >/dev/null 2>&1 && systemctl restart pveproxy.service
+  fi
+
+  if [ -f "$marker" ]; then
+    MANAGE_REPOS=0
+    . "$marker"
+    [ "${MANAGE_REPOS:-0}" = "1" ] && manage_repos
   fi
   return 0
 }
