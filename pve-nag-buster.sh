@@ -51,8 +51,12 @@ _disable_deb822() {
   f="$1"
   [ -f "$f" ] || return 0
   if grep -qi '^[[:space:]]*Enabled:[[:space:]]*true' "$f"; then
-    sed -i '' 's/^[[:space:]]*[Ee]nabled:[[:space:]]*[Tt]rue/Enabled: false/' "$f"
-    echo "$SCRIPT: disabled repo $f"
+    if sed 's/^[[:space:]]*[Ee]nabled:[[:space:]]*[Tt]rue/Enabled: false/' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; then
+      echo "$SCRIPT: disabled repo $f"
+    else
+      rm -f "$f.tmp"
+      echo "$SCRIPT: WARNING: failed to disable repo $f" >&2
+    fi
   elif ! grep -qi '^[[:space:]]*Enabled:' "$f"; then
     printf 'Enabled: false\n' >> "$f"
     echo "$SCRIPT: disabled repo $f (appended Enabled: false)"
