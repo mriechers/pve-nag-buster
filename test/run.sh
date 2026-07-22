@@ -78,5 +78,10 @@ check "install.sh syntax ok"     "$(sh -n "$REPO/install.sh" >/dev/null 2>&1 && 
 check "offline blob decodes to a hook" "$(decode_blob 2>/dev/null | head -1)" "#!/bin/sh"
 check "unknown flag -> usage"    "$(sh "$REPO/install.sh" --bogus 2>/dev/null | grep -c Usage)" "1"
 
+# --- offline blob invariant: embedded copy must equal the plaintext hook ---
+blob_sha="$(decode_blob 2>/dev/null | shasum -a 256 | cut -d' ' -f1)"
+file_sha="$(shasum -a 256 "$REPO/pve-nag-buster.sh" | cut -d' ' -f1)"
+check "offline blob == plaintext hook" "$blob_sha" "$file_sha"
+
 echo
 if [ "$FAIL" = 0 ]; then echo "ALL PASS"; exit 0; else echo "SOME FAILED"; exit 1; fi

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2064
 set -eu
 
-# pve-nag-buster (v04) https://github.com/foundObjects/pve-nag-buster
+# pve-nag-buster (v05) https://github.com/mriechers/pve-nag-buster
 # Copyright (C) 2019 /u/seaQueue (reddit.com/u/seaQueue)
 #
 # Removes Proxmox VE 6.x+ license nags automatically after updates
@@ -118,7 +118,7 @@ _install() {
     tempd="$(mktemp -d)" &&
       trap "echo 'Cleaning up temporary files ...'; rm -f $tempd/*; rmdir $tempd" EXIT
     temp="$tempd/pve-nag-buster.sh"
-    wget https://raw.githubusercontent.com/foundObjects/pve-nag-buster/master/pve-nag-buster.sh \
+    wget https://raw.githubusercontent.com/mriechers/pve-nag-buster/master/pve-nag-buster.sh \
       -q --show-progress -O "$temp"
   fi
   echo "Installing hook script as /usr/share/pve-nag-buster.sh"
@@ -139,28 +139,11 @@ _install() {
 # Important: if you're not me you should probably decode this and read it to make sure I'm not doing
 #            something malicious like mining dogecoin or stealing your valuable cat pictures
 
-# pve-nag-buster.sh (v04) encoded below:
+# pve-nag-buster.sh (v05) encoded below:
 
 emit_script() {
   base64 -d << 'YEET' | unxz
-/Td6WFoAAATm1rRGAgAhARwAAAAQz1jM4AYGA5ZdABGIQkY99BY0cwoNj8U0dcgowbs41qLC+aej
-mGQYj9kDeUYQYXlWIuqhoJLO08e8hIe8MoGJqvcVxM5VQehFNPqq4OH1KhbHgYGz5QSdcYFBPv2D
-jY49io85pCEdBXRw6wLkkTOpm7NoQQs6ZJ5F+vtHWz70HmnRfNhHpjrb16GcK0ERg/VLAx58EUIU
-t9OVgypxnKVdJL7/XxL/nUYLT65sn6ZQvKn4HpuPvK5eKgjZfBYJ3Q0CPDeFlXWIew43sqJTwmlX
-drWBSOlU6yMbmhWTJvfLpK9UfBAh6Qwp6UJ6i0Hbwe+d8qKO/SQ1Ciz6qDbM/cLTIENPYvVjlqzV
-jDmBtzdGMfqXXuFbtNB1uIJVUd3o1rRgH0Pau7yYXZVjDxJ5a32NnSwbbxsYqvcDc5QARfe321vH
-ICPQMtds3p/nuCpmMNex8SorApU6X0jvw18w9uMIF7dE2tk0Ge58qiIOH/+V2uVZzAUAUpTa7Gb8
-0aKWiai6f4bMXfLwvUOiDOucGAW2mMzXClpI7m4jrBy+TjSjPSR1JvS2e9ppcVH2vwcXdUOxxybB
-aDCozlkd9DecONOygFJz7J+V323Oe/kocpUmrZjsQTv0kIveFoPKTTkVYX7JPhePK4FJ884pSafp
-D+KYD3iGv3QqUt0rJBFP1IHhCKsRBNAGgDEaWUUCpT7XVRgGnhXcbQYyegBik+zenQOK6VV/t61Y
-S4Jy/U332GBwLIFRjJotutij5xQmly2AnADFu5LauI9Ud8/JaR9A/AnY05eP8LbotD5oAZf973pI
-UJ5kAdMn+tgw4OP26QC35iaDK/EPWNOyz+1pjrfY/cybwBjwstmu4BaTdbNzb3im39wIX7wOcX8e
-NCixn7Q/gi9gDK+i0Ulfi5R20+QenkgNssOJ3kLfhuutsj5mYJ6wYeEE0mshgzDuXK2fW+ehHqtS
-SOTIUn3cTl74GhjX9tlotUaFGdt/yR/8N8TDzc9dRd7As9Eg4gKfP6pnZJnutTB7k7feponsA+3h
-Qbgm0NdjrxL93IdmB6cgJnMUm/A6GJTv5UynUDYwjZO82rUl3zkVGfu5nNKyEWN7K5gfRBi2l5oQ
-kckHNZJwTLt7Vta4OAfd5fraF37aRquLfrI0TGU+wHAqKpwoBpU3YOZ7o5//2CEVk7vrz5O4N6e4
-erl0B2a6XTQ2u/ICDkCLaA2q4FIbMtlCsNHjkKPV5xQO+/maKQAAABUX772XxF0fAAGyB4cMAABV
-zeNfscRn+wIAAAAABFla
+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
 YEET
 }
 

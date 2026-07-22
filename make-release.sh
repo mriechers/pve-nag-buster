@@ -1,23 +1,16 @@
 #!/bin/sh
+# Re-pack install.sh's embedded offline copy from the current pve-nag-buster.sh.
+# Portable (macOS + Debian): requires xz and base64 on PATH. No `sed -i` (GNU-only).
+set -e
 
-_VERS="v04"
-_BRANCH=$(git rev-parse --abbrev-ref HEAD) >/dev/null 2>&1  ||
-  { echo "can't poll branch, defaulting to master" && _BRANCH="master"; }
+start="$(grep -n "<< 'YEET'" install.sh | cut -d: -f1)"
+end="$(grep -n '^YEET$' install.sh | cut -d: -f1)"
+[ -n "$start" ] && [ -n "$end" ] || { echo "make-release: YEET markers not found in install.sh" >&2; exit 1; }
 
-# update versions before packing install.sh
-sed -i -r \
-  -e "s;\(v[[:digit:]][[:digit:]].?\);\($_VERS\);" \
-  -e "s;(nag-buster/).*(/(pve-nag-buster|install)\.sh);\1$_BRANCH\2;" \
-  pve-nag-buster.sh install.sh README.md
-
-# TODO there's probably a two liner to handle all of this in awk:
-
-# pack install.sh
 {
-  head -n"$(grep -n "<< 'YEET'" install.sh | cut -d: -f1)" install.sh
+  head -n"$start" install.sh
   xz -z -9 -c pve-nag-buster.sh | base64
-  tail -n+"$(grep -n '^YEET$' install.sh | cut -d: -f1)" install.sh
-} > foofile
-cat foofile > install.sh
-rm -f foofile
-
+  tail -n+"$end" install.sh
+} > install.sh.new
+mv install.sh.new install.sh
+echo "Re-packed install.sh offline blob from pve-nag-buster.sh"
